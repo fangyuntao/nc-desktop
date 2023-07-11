@@ -531,7 +531,10 @@ public:
     [[nodiscard]] OCC::SyncEngine &syncEngine() const { return *_syncEngine; }
     [[nodiscard]] OCC::SyncJournalDb &syncJournal() const { return *_journalDb; }
 
-    FileModifier &localModifier() { return _localModifier; }
+    DiskFileModifier &localModifier()
+    {
+        return _localModifier;
+    }
     FileInfo &remoteModifier() { return _fakeQnam->currentRemoteState(); }
     FileInfo currentLocalState();
 
