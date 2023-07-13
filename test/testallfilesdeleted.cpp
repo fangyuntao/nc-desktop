@@ -69,7 +69,7 @@ private slots:
                 fakeFolder.syncEngine().journal()->clearFileTable(); // That's what Folder is doing
             });
 
-        auto &modifier = deleteOnRemote ? fakeFolder.remoteModifier() : fakeFolder.localModifier();
+        auto &modifier = deleteOnRemote ? dynamic_cast<FileModifier &>(fakeFolder.remoteModifier()) : dynamic_cast<FileModifier &>(fakeFolder.localModifier());
         const auto childrenKeys = fakeFolder.currentRemoteState().children.keys();
         for (const auto &key : childrenKeys) {
             modifier.remove(key);
@@ -111,7 +111,7 @@ private slots:
                 callback(false);
             });
 
-        auto &modifier = deleteOnRemote ? fakeFolder.remoteModifier() : fakeFolder.localModifier();
+        auto &modifier = deleteOnRemote ? dynamic_cast<FileModifier &>(fakeFolder.remoteModifier()) : dynamic_cast<FileModifier &>(fakeFolder.localModifier());
         const auto childrenKeys = fakeFolder.currentRemoteState().children.keys();
         for (const auto &key : childrenKeys) {
             modifier.remove(key);
