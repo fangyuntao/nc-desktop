@@ -77,6 +77,7 @@ static void fillFileRecordFromGetQuery(SyncJournalFileRecord &rec, SqlQuery &que
     rec._isShared = query.intValue(19) > 0;
     rec._lastShareStateFetchedTimestamp = query.int64Value(20);
     rec._sharedByMe = query.intValue(21) > 0;
+    rec._attributes = query.int64Value(1);
 }
 
 static QByteArray defaultJournalMode(const QString &dbPath)
@@ -780,6 +781,7 @@ bool SyncJournalDb::updateMetadataTableStructure()
     addColumn(QStringLiteral("isShared"), QStringLiteral("INTEGER"));
     addColumn(QStringLiteral("lastShareStateFetchedTimestmap"), QStringLiteral("INTEGER"));
     addColumn(QStringLiteral("sharedByMe"), QStringLiteral("INTEGER"));
+    addColumn(QStringLiteral("attributes"), QStringLiteral("INTEGER"));
 
     auto uploadInfoColumns = tableColumns("uploadinfo");
     if (uploadInfoColumns.isEmpty())
@@ -950,7 +952,8 @@ Result<void, QString> SyncJournalDb::setFileRecord(const SyncJournalFileRecord &
                  << "lock editor:" << record._lockstate._lockEditorApp
                  << "sharedByMe:" << record._sharedByMe
                  << "isShared:" << record._isShared
-                 << "lastShareStateFetchedTimestamp:" << record._lastShareStateFetchedTimestamp;
+                 << "lastShareStateFetchedTimestamp:" << record._attributes
+                 << "attributes:" << record._attributes;
 
     const qint64 phash = getPHash(record._path);
     if (!checkConnect()) {
@@ -976,8 +979,8 @@ Result<void, QString> SyncJournalDb::setFileRecord(const SyncJournalFileRecord &
     const auto query = _queryManager.get(PreparedSqlQueryManager::SetFileRecordQuery, QByteArrayLiteral("INSERT OR REPLACE INTO metadata "
                                                                                                         "(phash, pathlen, path, inode, uid, gid, mode, modtime, type, md5, fileid, remotePerm, filesize, ignoredChildrenRemote, "
                                                                                                         "contentChecksum, contentChecksumTypeId, e2eMangledName, isE2eEncrypted, lock, lockType, lockOwnerDisplayName, lockOwnerId, "
-                                                                                                        "lockOwnerEditor, lockTime, lockTimeout, isShared, lastShareStateFetchedTimestmap, sharedByMe) "
-                                                                                                        "VALUES (?1 , ?2, ?3 , ?4 , ?5 , ?6 , ?7,  ?8 , ?9 , ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28);"),
+                                                                                                        "lockOwnerEditor, lockTime, lockTimeout, isShared, lastShareStateFetchedTimestmap, sharedByMe, attributes) "
+                                                                                                        "VALUES (?1 , ?2, ?3 , ?4 , ?5 , ?6 , ?7,  ?8 , ?9 , ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29);"),
         _db);
     if (!query) {
         return query->error();
@@ -1011,6 +1014,7 @@ Result<void, QString> SyncJournalDb::setFileRecord(const SyncJournalFileRecord &
     query->bindValue(26, record._isShared);
     query->bindValue(27, record._lastShareStateFetchedTimestamp);
     query->bindValue(28, record._sharedByMe);
+    query->bindValue(29, record._attributes);
 
     if (!query->exec()) {
         return query->error();

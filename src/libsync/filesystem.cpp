@@ -91,6 +91,11 @@ bool FileSystem::fileChanged(const QString &fileName,
         || getModTime(fileName) != previousMtime;
 }
 
+bool FileSystem::fileAttributesChanged(const QString &fileName, qint64 previousAttributes)
+{
+    return getAttributes(fileName) != previousAttributes;
+}
+
 bool FileSystem::verifyFileUnchanged(const QString &fileName,
                                      qint64 previousSize,
                                      time_t previousMtime)
@@ -129,6 +134,14 @@ qint64 FileSystem::getSize(const QString &filename)
     }
 #endif
     return QFileInfo(filename).size();
+}
+
+quint64 FileSystem::getAttributes(const QString &filename)
+{
+#ifdef Q_OS_WIN
+    return Utility::getAttributes(filename);
+#endif
+    return 0;
 }
 
 // Code inspired from Qt5's QDir::removeRecursively

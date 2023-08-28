@@ -63,6 +63,8 @@ namespace FileSystem {
      */
     qint64 OWNCLOUDSYNC_EXPORT getSize(const QString &filename);
 
+    quint64 OWNCLOUDSYNC_EXPORT getAttributes(const QString &filename);
+
     /**
      * @brief Retrieve a file inode with csync
      */
@@ -78,6 +80,12 @@ namespace FileSystem {
     bool OWNCLOUDSYNC_EXPORT fileChanged(const QString &fileName,
         qint64 previousSize,
         time_t previousMtime);
+
+    /**
+     * @brief Check if \a fileName has changed given previous attributes
+     * @return true if the file's attributes are not what is expected.
+     */
+    bool OWNCLOUDSYNC_EXPORT fileAttributesChanged(const QString &fileName, qint64 previousAttributes);
 
     /**
      * @brief Like !fileChanged() but with verbose logging if the file *did* change.

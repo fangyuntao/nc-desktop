@@ -173,6 +173,19 @@ QRect Utility::getTaskbarDimensions()
     return QRect(barRect.left, barRect.top, (barRect.right - barRect.left), (barRect.bottom - barRect.top));
 }
 
+quint64 Utility::getAttributes(const QString &filename)
+{
+    if (filename.isEmpty()) {
+        return 0;
+    }
+    const auto result = GetFileAttributesW(filename.toStdWString().c_str());
+    if (result == INVALID_FILE_ATTRIBUTES) {
+        qCWarning(lcUtility) << "Could not retrieve file" << filename << "attributes" << formatWinError(GetLastError());
+        return 0;
+    }
+    return result;
+}
+
 bool Utility::registryKeyExists(HKEY hRootKey, const QString &subKey)
 {
     HKEY hKey;

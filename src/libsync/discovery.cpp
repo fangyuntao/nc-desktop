@@ -1149,7 +1149,11 @@ void ProcessDirectoryJob::processFileAnalyzeLocalInfo(
                              << "dbEntry._modtime:" << dbEntry._modtime
                              << "localEntry.modtime:" << localEntry.modtime;
             _childModified = true;
-        } else {
+        } else if (dbEntry._attributes != item->_attributes) {
+            item->_instruction = CSYNC_INSTRUCTION_UPDATE_METADATA;
+            item->_direction = SyncFileItem::Down;
+        }
+        else {
             // Local file was changed
             item->_instruction = CSYNC_INSTRUCTION_SYNC;
             if (noServerEntry) {

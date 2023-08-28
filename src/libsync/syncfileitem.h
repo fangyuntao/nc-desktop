@@ -292,6 +292,7 @@ public:
 
     // Variables used by the propagator
     SyncInstructions _instruction = CSYNC_INSTRUCTION_NONE;
+    quint64 _attributes = 0;
     time_t _modtime = 0;
     QByteArray _etag;
     qint64 _size = 0;

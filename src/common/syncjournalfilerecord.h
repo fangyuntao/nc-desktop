@@ -73,6 +73,7 @@ public:
 
     QByteArray _path;
     quint64 _inode = 0;
+    quint64 _attributes = 0;
     qint64 _modtime = 0;
     ItemType _type = ItemTypeSkip;
     QByteArray _etag;
