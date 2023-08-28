@@ -1064,6 +1064,7 @@ void ProcessDirectoryJob::processFileAnalyzeLocalInfo(
     Q_ASSERT(localEntry.isValid());
 
     item->_inode = localEntry.inode;
+    item->_lastAccessTime = localEntry.lastAccessTime;
 
     if (dbEntry.isValid()) {
         bool typeChange = localEntry.isDirectory != dbEntry.isDirectory();
@@ -1149,9 +1150,6 @@ void ProcessDirectoryJob::processFileAnalyzeLocalInfo(
                              << "dbEntry._modtime:" << dbEntry._modtime
                              << "localEntry.modtime:" << localEntry.modtime;
             _childModified = true;
-        } else if (dbEntry._attributes != item->_attributes) {
-            item->_instruction = CSYNC_INSTRUCTION_UPDATE_METADATA;
-            item->_direction = SyncFileItem::Down;
         }
         else {
             // Local file was changed
@@ -1183,6 +1181,16 @@ void ProcessDirectoryJob::processFileAnalyzeLocalInfo(
                     item->_instruction = CSYNC_INSTRUCTION_UPDATE_METADATA;
                 }
             }
+        }
+
+        if ((!item->isDirectory() && item->_instruction == CSYNC_INSTRUCTION_NONE)
+            && dbEntry._lastAccessTime != item->_lastAccessTime
+            && (item->_file.endsWith(QStringLiteral(".doc"))
+                || item->_file.endsWith(QStringLiteral(".docx"))
+                || item->_file.endsWith(QStringLiteral(".odt"))))
+        {
+            item->_instruction = CSYNC_INSTRUCTION_UPDATE_METADATA;
+            item->_direction = SyncFileItem::Down;
         }
 
         finalize();

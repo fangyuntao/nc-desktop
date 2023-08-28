@@ -267,7 +267,9 @@ namespace Utility {
     OCSYNC_EXPORT bool registryWalkValues(HKEY hRootKey, const QString &subKey, const std::function<void(const QString &, bool *)> &callback);
     OCSYNC_EXPORT QRect getTaskbarDimensions();
 
-    OCSYNC_EXPORT quint64 getAttributes(const QString &filename);
+    OCSYNC_EXPORT quint64 getLastAccessTime(const QString &filename);
+
+    OCSYNC_EXPORT quint64 fileTimeToUnixTime(const FILETIME &fileTime);
 
     // Possibly refactor to share code with UnixTimevalToFileTime in c_time.c
     OCSYNC_EXPORT void UnixTimeToFiletime(time_t t, FILETIME *filetime);

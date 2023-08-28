@@ -63,10 +63,13 @@ namespace FileSystem {
      */
     qint64 OWNCLOUDSYNC_EXPORT getSize(const QString &filename);
 
-    quint64 OWNCLOUDSYNC_EXPORT getAttributes(const QString &filename);
-
     /**
      * @brief Retrieve a file inode with csync
+     */
+    quint64 OWNCLOUDSYNC_EXPORT getLastAccessTime(const QString &filename);
+
+    /**
+     * @brief Retrieve a file last access time
      */
     bool OWNCLOUDSYNC_EXPORT getInode(const QString &filename, quint64 *inode);
 
@@ -82,10 +85,10 @@ namespace FileSystem {
         time_t previousMtime);
 
     /**
-     * @brief Check if \a fileName has changed given previous attributes
-     * @return true if the file's attributes are not what is expected.
+     * @brief Check if \a fileName has changed given previous lastAccessTime
+     * @return true if the file's lastAccessTime are not what is expected.
      */
-    bool OWNCLOUDSYNC_EXPORT fileAttributesChanged(const QString &fileName, qint64 previousAttributes);
+    bool OWNCLOUDSYNC_EXPORT fileLastAccessTimeChanged(const QString &fileName, quint64 previousLastAccessTime);
 
     /**
      * @brief Like !fileChanged() but with verbose logging if the file *did* change.

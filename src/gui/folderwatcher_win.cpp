@@ -65,10 +65,9 @@ void WatcherThread::watchChanges(size_t fileNotifyBufferSize,
     while (!_done) {
         ResetEvent(_resultEvent);
 
-        auto pFileNotifyBuffer =
-                reinterpret_cast<FILE_NOTIFY_INFORMATION *>(fileNotifyBuffer.data());
+        auto pFileNotifyBuffer = reinterpret_cast<FILE_NOTIFY_EXTENDED_INFORMATION *>(fileNotifyBuffer.data());
         DWORD dwBytesReturned = 0;
-        if (!ReadDirectoryChangesW(_directory, pFileNotifyBuffer,
+        if (!ReadDirectoryChangesExW(_directory, pFileNotifyBuffer,
                 static_cast<DWORD>(fileNotifyBufferSize), true,
                 FILE_NOTIFY_CHANGE_FILE_NAME
                 | FILE_NOTIFY_CHANGE_DIR_NAME
@@ -76,7 +75,7 @@ void WatcherThread::watchChanges(size_t fileNotifyBufferSize,
                 | FILE_NOTIFY_CHANGE_ATTRIBUTES, // attributes are for vfs pin state changes
                 &dwBytesReturned,
                 &overlapped,
-                nullptr)) {
+                nullptr, ReadDirectoryNotifyExtendedInformation)) {
             const DWORD errorCode = GetLastError();
             if (errorCode == ERROR_NOTIFY_ENUM_DIR) {
                 qCDebug(lcFolderWatcher) << "The buffer for changes overflowed! Triggering a generic change and resizing";
@@ -119,7 +118,7 @@ void WatcherThread::watchChanges(size_t fileNotifyBufferSize,
             break;
         }
 
-        FILE_NOTIFY_INFORMATION *curEntry = pFileNotifyBuffer;
+        FILE_NOTIFY_EXTENDED_INFORMATION *curEntry = pFileNotifyBuffer;
         forever {
             const int len = curEntry->FileNameLength / sizeof(wchar_t);
             QString longfile = longPath + QString::fromWCharArray(curEntry->FileName, len);
@@ -164,7 +163,7 @@ void WatcherThread::watchChanges(size_t fileNotifyBufferSize,
                 break;
             }
             // FILE_NOTIFY_INFORMATION has no fixed size and the offset is in bytes therefore we first need to cast to char
-            curEntry = reinterpret_cast<FILE_NOTIFY_INFORMATION *>(reinterpret_cast<char*>(curEntry) + curEntry->NextEntryOffset);
+            curEntry = reinterpret_cast<FILE_NOTIFY_EXTENDED_INFORMATION *>(reinterpret_cast<char *>(curEntry) + curEntry->NextEntryOffset);
         }
     }
 

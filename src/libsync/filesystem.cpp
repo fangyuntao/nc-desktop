@@ -91,9 +91,9 @@ bool FileSystem::fileChanged(const QString &fileName,
         || getModTime(fileName) != previousMtime;
 }
 
-bool FileSystem::fileAttributesChanged(const QString &fileName, qint64 previousAttributes)
+bool FileSystem::fileLastAccessTimeChanged(const QString &fileName, quint64 previousLastAccessTime)
 {
-    return getAttributes(fileName) != previousAttributes;
+    return getLastAccessTime(fileName) != previousLastAccessTime;
 }
 
 bool FileSystem::verifyFileUnchanged(const QString &fileName,
@@ -136,10 +136,10 @@ qint64 FileSystem::getSize(const QString &filename)
     return QFileInfo(filename).size();
 }
 
-quint64 FileSystem::getAttributes(const QString &filename)
+quint64 FileSystem::getLastAccessTime(const QString &filename)
 {
 #ifdef Q_OS_WIN
-    return Utility::getAttributes(filename);
+    return Utility::getLastAccessTime(filename);
 #endif
     return 0;
 }

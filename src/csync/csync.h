@@ -200,6 +200,7 @@ struct OCSYNC_EXPORT csync_file_stat_s {
   time_t modtime = 0;
   int64_t size = 0;
   uint64_t inode = 0;
+  uint64_t lastAccessTime = 0;
 
   OCC::RemotePermissions remotePerm;
   ItemType type BITFIELD(4);

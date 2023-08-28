@@ -116,6 +116,7 @@ SyncJournalFileRecord SyncFileItem::toSyncJournalFileRecordWithInode(const QStri
         // detect the rename though.
         qCWarning(lcFileItem) << "Failed to query the 'inode' for file " << localFileName;
     }
+    rec._lastAccessTime = _lastAccessTime;
     return rec;
 }
 

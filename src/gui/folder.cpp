@@ -609,7 +609,7 @@ void Folder::slotWatchedPathChanged(const QString &path, ChangeReason reason)
         bool spurious = false;
         if (record.isValid()
             && !FileSystem::fileChanged(path, record._fileSize, record._modtime)
-            && !FileSystem::fileAttributesChanged(path, record._attributes)) {
+            && !FileSystem::fileLastAccessTimeChanged(path, record._lastAccessTime)) {
             spurious = true;
 
             if (auto pinState = _vfs->pinState(relativePath.toString())) {
