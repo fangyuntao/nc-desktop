@@ -142,8 +142,6 @@ std::unique_ptr<csync_file_stat_t> csync_vio_local_readdir(csync_vio_handle_t *h
   file_stat = std::make_unique<csync_file_stat_t>();
   file_stat->path = path.toUtf8();
 
-  file_stat->lastAccessTime = OCC::Utility::fileTimeToUnixTime(handle->ffd.ftLastAccessTime);
-
     if (vfs && vfs->statTypeVirtualFile(file_stat.get(), &handle->ffd)) {
       // all good
     } else if (handle->ffd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
@@ -174,6 +172,8 @@ std::unique_ptr<csync_file_stat_t> csync_vio_local_readdir(csync_vio_handle_t *h
 
     file_stat->size = (handle->ffd.nFileSizeHigh * ((int64_t)(MAXDWORD)+1)) + handle->ffd.nFileSizeLow;
     file_stat->modtime = FileTimeToUnixTime(&handle->ffd.ftLastWriteTime, &rem);
+    rem = 0;
+    file_stat->lastAccessTime = FileTimeToUnixTime(&handle->ffd.ftLastAccessTime, &rem);
 
     // path always ends with '\', by construction
 
@@ -223,6 +223,9 @@ int csync_vio_local_stat(const QString &uri, csync_file_stat_t *buf)
 
     DWORD rem = 0;
     buf->modtime = FileTimeToUnixTime(&fileInfo.ftLastWriteTime, &rem);
+
+    rem = 0;
+    buf->lastAccessTime = FileTimeToUnixTime(&fileInfo.ftLastAccessTime, &rem);
 
     CloseHandle(h);
     return 0;

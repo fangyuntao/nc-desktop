@@ -173,45 +173,6 @@ QRect Utility::getTaskbarDimensions()
     return QRect(barRect.left, barRect.top, (barRect.right - barRect.left), (barRect.bottom - barRect.top));
 }
 
-quint64 Utility::fileTimeToUnixTime(const FILETIME &fileTime)
-{
-    ULARGE_INTEGER uli;
-    uli.LowPart = fileTime.dwLowDateTime;
-    uli.HighPart = fileTime.dwHighDateTime;
-
-    const auto epochDifference = 116444736000000000ULL; // 100-nanosecond intervals between 1601 and 1970
-    return (uli.QuadPart - epochDifference) / 10000000ULL; // Convert to seconds
-}
-
-quint64 Utility::getLastAccessTime(const QString &filename)
-{
-    if (filename.isEmpty()) {
-        return 0;
-    }
-
-    const auto handle = CreateFileW(filename.toStdWString().c_str(),
-                    GENERIC_READ,
-                    FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
-                    nullptr,
-                    OPEN_EXISTING,
-                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-                    nullptr);
-    if (handle == INVALID_HANDLE_VALUE) {
-        qCWarning(lcUtility) << "Could not retrieve lastAccessTime for file" << filename << formatWinError(GetLastError());
-        return 0;
-    }
-
-    FILETIME lastAccessTime;
-    const auto resultGetFileTime = GetFileTime(handle, nullptr, &lastAccessTime, nullptr);
-    CloseHandle(handle);
-
-    if (!resultGetFileTime) {
-        qCWarning(lcUtility) << "Could not retrieve lastAccessTime for file" << filename << formatWinError(GetLastError());
-    }
-
-    return fileTimeToUnixTime(lastAccessTime);
-}
-
 bool Utility::registryKeyExists(HKEY hRootKey, const QString &subKey)
 {
     HKEY hKey;

@@ -123,6 +123,17 @@ static qint64 getSizeWithCsync(const QString &filename)
     }
     return result;
 }
+static quint64 getlastAccessTimeWithCsync(const QString &filename)
+{
+    quint64 result = 0;
+    csync_file_stat_t stat;
+    if (csync_vio_local_stat(filename, &stat) != -1) {
+        result = stat.lastAccessTime;
+    } else {
+        qCWarning(lcFileSystem) << "Could not get last access time for" << filename << "with csync" << Utility::formatWinError(errno);
+    }
+    return result;
+}
 #endif
 
 qint64 FileSystem::getSize(const QString &filename)
@@ -139,7 +150,7 @@ qint64 FileSystem::getSize(const QString &filename)
 quint64 FileSystem::getLastAccessTime(const QString &filename)
 {
 #ifdef Q_OS_WIN
-    return Utility::getLastAccessTime(filename);
+    return getlastAccessTimeWithCsync(filename);
 #endif
     return 0;
 }
