@@ -143,9 +143,7 @@ public:
 
     [[nodiscard]] bool tokenIsSetup() const;
 
-    [[nodiscard]] QVariantList discoveredTokens() const;
-
-    [[nodiscard]] QVariantList discoveredKeys() const;
+    [[nodiscard]] QVariantList discoveredCertificates() const;
 
     [[nodiscard]] const QSslKey& getPublicKey() const;
 
@@ -165,7 +163,9 @@ public:
 
     void setCertificate(const QSslCertificate &certificate);
 
-    ENGINE* sslEngine() const;
+    [[nodiscard]] ENGINE* sslEngine() const;
+
+    [[nodiscard]] ClientSideTokenSelector* usbTokenInformation();
 
 signals:
     void initializationFinished(bool isNewMnemonicGenerated = false);
@@ -178,7 +178,7 @@ signals:
 
 public slots:
     void initialize(const OCC::AccountPtr &account);
-    void initializeHardwareTokenEncryption(const AccountPtr &account);
+    void initializeHardwareTokenEncryption(const OCC::AccountPtr &account);
     void forgetSensitiveData(const OCC::AccountPtr &account);
 
 private slots:

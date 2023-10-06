@@ -28,88 +28,42 @@ class ClientSideTokenSelector : public QObject
 
     Q_PROPERTY(bool isSetup READ isSetup NOTIFY isSetupChanged)
 
-    Q_PROPERTY(QVariantList discoveredTokens READ discoveredTokens NOTIFY discoveredTokensChanged)
+    Q_PROPERTY(QVariantList discoveredCertificates READ discoveredCertificates NOTIFY discoveredCertificatesChanged)
 
-    Q_PROPERTY(QVariantList discoveredKeys READ discoveredKeys NOTIFY discoveredKeysChanged)
-
-    Q_PROPERTY(QString slotManufacturer READ slotManufacturer WRITE setSlotManufacturer NOTIFY slotManufacturerChanged)
-
-    Q_PROPERTY(QString tokenManufacturer READ tokenManufacturer WRITE setTokenManufacturer NOTIFY tokenManufacturerChanged)
-
-    Q_PROPERTY(QString tokenModel READ tokenModel WRITE setTokenModel NOTIFY tokenModelChanged)
-
-    Q_PROPERTY(QString tokenSerialNumber READ tokenSerialNumber WRITE setTokenSerialNumber NOTIFY tokenSerialNumberChanged)
-
-    Q_PROPERTY(int keyIndex READ keyIndex WRITE setKeyIndex NOTIFY keyIndexChanged)
+    Q_PROPERTY(QString serialNumber READ serialNumber WRITE setSerialNumber NOTIFY serialNumberChanged)
 
 public:
     explicit ClientSideTokenSelector(QObject *parent = nullptr);
 
     [[nodiscard]] bool isSetup() const;
 
-    [[nodiscard]] QVariantList discoveredTokens() const;
+    [[nodiscard]] QVariantList discoveredCertificates() const;
 
-    [[nodiscard]] QVariantList discoveredKeys() const;
-
-    [[nodiscard]] QString slotManufacturer() const;
-
-    [[nodiscard]] QString tokenManufacturer() const;
-
-    [[nodiscard]] QString tokenModel() const;
-
-    [[nodiscard]] QString tokenSerialNumber() const;
-
-    [[nodiscard]] int keyIndex() const;
+    [[nodiscard]] QString serialNumber() const;
 
 public slots:
 
-    void searchForToken(const OCC::AccountPtr &account);
+    void searchForCertificates(const OCC::AccountPtr &account);
 
-    void setSlotManufacturer(const QString &slotManufacturer);
-
-    void setTokenManufacturer(const QString &tokenManufacturer);
-
-    void setTokenModel(const QString &tokenModel);
-
-    void setTokenSerialNumber(const QString &tokenSerialNumber);
-
-    void setKeyIndex(int keyIndex);
+    void setSerialNumber(const QString &serialNumber);
 
 signals:
 
     void isSetupChanged();
 
-    void discoveredTokensChanged();
+    void discoveredCertificatesChanged();
 
-    void discoveredKeysChanged();
+    void certificateIndexChanged();
 
-    void slotManufacturerChanged();
-
-    void tokenManufacturerChanged();
-
-    void tokenModelChanged();
-
-    void tokenSerialNumberChanged();
-
-    void keyIndexChanged();
+    void serialNumberChanged();
 
     void failedToInitialize(const OCC::AccountPtr &account);
 
 private:
 
-    QVariantList _discoveredTokens;
+    QVariantList _discoveredCertificates;
 
-    QVariantList _discoveredPrivateKeys;
-
-    QString _slotManufacturer;
-
-    QString _tokenManufacturer;
-
-    QString _tokenModel;
-
-    QString _tokenSerialNumber;
-
-    int _keyIndex = -1;
+    QString _serialNumber;
 };
 
 }

@@ -307,8 +307,7 @@ void AccountSettings::slotDisplayTokenInitDialog()
 {
     disconnect(_accountState->account()->e2e(), &ClientSideEncryption::initializationFinished, this, &AccountSettings::slotE2eEncryptionInitializationFinished);
     disconnect(_accountState->account()->e2e(), &ClientSideEncryption::displayTokenInitDialog, this, &AccountSettings::slotDisplayTokenInitDialog);
-    Systray::instance()->createTokenInitDialog(_accountState->account()->e2e()->discoveredTokens(),
-                                               _accountState->account()->e2e()->discoveredKeys());
+    Systray::instance()->createTokenInitDialog(_accountState->account()->e2e()->discoveredCertificates(), _accountState->account()->e2e()->usbTokenInformation());
 }
 
 void AccountSettings::slotEncryptFolderFinished(int status)

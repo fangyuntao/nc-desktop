@@ -24,6 +24,7 @@
 #include "configfile.h"
 #include "accessmanager.h"
 #include "callstatechecker.h"
+#include "clientsidetokenselector.h"
 
 #include <QCursor>
 #include <QGuiApplication>
@@ -35,6 +36,7 @@
 #include <QMenu>
 #include <QGuiApplication>
 #include <QQuickView>
+#include <QMessageBox>
 
 #ifdef USE_FDO_NOTIFICATIONS
 #include <QDBusConnection>
@@ -413,24 +415,32 @@ void Systray::createFileActivityDialog(const QString &localPath)
     Q_EMIT showFileDetailsPage(localPath, FileDetailsPage::Activity);
 }
 
-void Systray::createTokenInitDialog(const QVariantList &tokensInfo,
-                                    const QVariantList &keysInfo)
+void Systray::createTokenInitDialog(const QVariantList &certificatesInfo,
+                                    ClientSideTokenSelector *certificateSelector)
 {
     if(_tokenInitDialog) {
         destroyDialog(_tokenInitDialog);
         _tokenInitDialog = nullptr;
     }
 
-    qCDebug(lcSystray) << "Opening new token init dialog with " << tokensInfo.size() << "possible tokens";
+    qCDebug(lcSystray) << "Opening new token init dialog with " << certificatesInfo.size() << "possible certificates";
 
     if (!_trayEngine) {
         qCWarning(lcSystray) << "Could not open token init dialog as no tray engine was available";
         return;
     }
 
+    if (certificatesInfo.isEmpty() || certificatesInfo.isEmpty()) {
+        QMessageBox errorDialog;
+
+        errorDialog.show();
+
+        return;
+    }
+
     const QVariantMap initialProperties{
-        {"tokensInfo", tokensInfo},
-        {"keysInfo", keysInfo}
+        {"certificatesInfo", certificatesInfo},
+        {"certificateSelector", QVariant::fromValue(certificateSelector)},
     };
 
     QQmlComponent encryptionTokenDialog(_trayEngine, QStringLiteral("qrc:/qml/src/gui/EncryptionTokenSelectionWindow.qml"));
