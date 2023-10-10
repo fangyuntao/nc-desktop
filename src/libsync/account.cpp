@@ -451,6 +451,7 @@ void Account::setSslConfiguration(const QSslConfiguration &config)
 {
     auto configCopy = config;
     configCopy.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
+    configCopy.setProtocol(QSsl::TlsV1_2);
     _sslConfiguration = configCopy;
 }
 
@@ -473,6 +474,7 @@ QSslConfiguration Account::getOrCreateSslConfig()
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionPersistence, false);
 
     sslConfig.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, false);
+    sslConfig.setProtocol(QSsl::TlsV1_2);
     sslConfig.setOcspStaplingEnabled(Theme::instance()->enableStaplingOCSP());
 
     return sslConfig;
