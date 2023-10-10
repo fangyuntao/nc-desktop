@@ -447,14 +447,11 @@ SimpleNetworkJob *Account::sendRequest(const QByteArray &verb, const QUrl &url, 
     return job;
 }
 
-void Account::setSslConfiguration(QSslConfiguration &config)
+void Account::setSslConfiguration(const QSslConfiguration &config)
 {
-    auto isSslOptionDisableLegacyRenegotiationEnabled = config.testSslOption(QSsl::SslOptionDisableLegacyRenegotiation);
-    if (isSslOptionDisableLegacyRenegotiationEnabled) {
-        config.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, false);
-    }
-    auto sslProtocol = config.protocol();
-    _sslConfiguration = config;
+    auto configCopy = config;
+    configCopy.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
+    _sslConfiguration = configCopy;
 }
 
 QSslConfiguration Account::getOrCreateSslConfig()
@@ -462,6 +459,7 @@ QSslConfiguration Account::getOrCreateSslConfig()
     if (!_sslConfiguration.isNull()) {
         // Will be set by CheckServerJob::finished()
         // We need to use a central shared config to get SSL session tickets
+        _sslConfiguration.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
         return _sslConfiguration;
     }
 
@@ -474,12 +472,7 @@ QSslConfiguration Account::getOrCreateSslConfig()
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionSharing, false);
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionPersistence, false);
 
-    auto isSslOptionDisableLegacyRenegotiationEnabled = sslConfig.testSslOption(QSsl::SslOptionDisableLegacyRenegotiation);
-    if (isSslOptionDisableLegacyRenegotiationEnabled) {
-        sslConfig.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, false);
-    }
-    auto sslProtocol = sslConfig.protocol();
-
+    sslConfig.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, false);
     sslConfig.setOcspStaplingEnabled(Theme::instance()->enableStaplingOCSP());
 
     return sslConfig;
