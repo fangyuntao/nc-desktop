@@ -451,7 +451,6 @@ void Account::setSslConfiguration(const QSslConfiguration &config)
 {
     auto configCopy = config;
     configCopy.setProtocol(QSsl::TlsV1_2);
-    configCopy.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
     _sslConfiguration = configCopy;
 }
 
@@ -461,7 +460,6 @@ QSslConfiguration Account::getOrCreateSslConfig()
         // Will be set by CheckServerJob::finished()
         // We need to use a central shared config to get SSL session tickets
         _sslConfiguration.setProtocol(QSsl::TlsV1_2);
-        _sslConfiguration.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
         return _sslConfiguration;
     }
 
@@ -474,7 +472,6 @@ QSslConfiguration Account::getOrCreateSslConfig()
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionSharing, false);
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionPersistence, false);
 
-    sslConfig.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
     sslConfig.setProtocol(QSsl::TlsV1_2);
     sslConfig.setOcspStaplingEnabled(Theme::instance()->enableStaplingOCSP());
 
