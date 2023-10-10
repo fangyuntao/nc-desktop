@@ -211,7 +211,7 @@ if(BUILD_CLIENT)
     endif()
     find_package(Sphinx)
     find_package(PdfLatex)
-    find_package(OpenSSL 1.1 REQUIRED )
+    find_package(OpenSSL 3.0 REQUIRED )
 
    find_package(ZLIB REQUIRED)
 

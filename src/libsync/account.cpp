@@ -447,8 +447,13 @@ SimpleNetworkJob *Account::sendRequest(const QByteArray &verb, const QUrl &url, 
     return job;
 }
 
-void Account::setSslConfiguration(const QSslConfiguration &config)
+void Account::setSslConfiguration(QSslConfiguration &config)
 {
+    auto isSslOptionDisableLegacyRenegotiationEnabled = config.testSslOption(QSsl::SslOptionDisableLegacyRenegotiation);
+    if (isSslOptionDisableLegacyRenegotiationEnabled) {
+        config.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, false);
+    }
+    auto sslProtocol = config.protocol();
     _sslConfiguration = config;
 }
 
@@ -468,6 +473,12 @@ QSslConfiguration Account::getOrCreateSslConfig()
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionTickets, false);
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionSharing, false);
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionPersistence, false);
+
+    auto isSslOptionDisableLegacyRenegotiationEnabled = sslConfig.testSslOption(QSsl::SslOptionDisableLegacyRenegotiation);
+    if (isSslOptionDisableLegacyRenegotiationEnabled) {
+        sslConfig.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, false);
+    }
+    auto sslProtocol = sslConfig.protocol();
 
     sslConfig.setOcspStaplingEnabled(Theme::instance()->enableStaplingOCSP());
 

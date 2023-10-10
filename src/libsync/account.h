@@ -196,7 +196,7 @@ public:
     /** The ssl configuration during the first connection */
     QSslConfiguration getOrCreateSslConfig();
     [[nodiscard]] QSslConfiguration sslConfiguration() const { return _sslConfiguration; }
-    void setSslConfiguration(const QSslConfiguration &config);
+    void setSslConfiguration(QSslConfiguration &config);
     // Because of bugs in Qt, we use this to store info needed for the SSL Button
     QSslCipher _sessionCipher;
     QByteArray _sessionTicket;
