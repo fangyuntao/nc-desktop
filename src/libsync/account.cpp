@@ -450,8 +450,8 @@ SimpleNetworkJob *Account::sendRequest(const QByteArray &verb, const QUrl &url, 
 void Account::setSslConfiguration(const QSslConfiguration &config)
 {
     auto configCopy = config;
-    configCopy.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
     configCopy.setProtocol(QSsl::TlsV1_2);
+    configCopy.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
     _sslConfiguration = configCopy;
 }
 
@@ -460,6 +460,7 @@ QSslConfiguration Account::getOrCreateSslConfig()
     if (!_sslConfiguration.isNull()) {
         // Will be set by CheckServerJob::finished()
         // We need to use a central shared config to get SSL session tickets
+        _sslConfiguration.setProtocol(QSsl::TlsV1_2);
         _sslConfiguration.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
         return _sslConfiguration;
     }
@@ -473,7 +474,7 @@ QSslConfiguration Account::getOrCreateSslConfig()
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionSharing, false);
     sslConfig.setSslOption(QSsl::SslOptionDisableSessionPersistence, false);
 
-    sslConfig.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, false);
+    sslConfig.setSslOption(QSsl::SslOptionDisableLegacyRenegotiation, true);
     sslConfig.setProtocol(QSsl::TlsV1_2);
     sslConfig.setOcspStaplingEnabled(Theme::instance()->enableStaplingOCSP());
 
