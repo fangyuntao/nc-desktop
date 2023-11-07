@@ -394,6 +394,18 @@ bool SyncJournalDb::checkConnect()
                                                                         end - text, 0));
                                 }, nullptr, nullptr);
 
+    sqlite3_create_function(_db.sqliteDb(), "path_hash", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nullptr,
+                                [] (sqlite3_context *ctx,int, sqlite3_value **argv) {
+                                    const auto text = reinterpret_cast<const char*>(sqlite3_value_text(argv[0]));
+                                    sqlite3_result_int64(ctx, c_jhash64(reinterpret_cast<const uint8_t*>(text), strlen(text), 0));
+                                }, nullptr, nullptr);
+
+    sqlite3_create_function(_db.sqliteDb(), "path_length", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nullptr,
+                                [] (sqlite3_context *ctx,int, sqlite3_value **argv) {
+                                    const auto text = reinterpret_cast<const char*>(sqlite3_value_text(argv[0]));
+                                    sqlite3_result_int64(ctx, strlen(text));
+                                }, nullptr, nullptr);
+
     /* Because insert is so slow, we do everything in a transaction, and only need one call to commit */
     startTransaction();
 
@@ -1028,6 +1040,28 @@ Result<void, QString> SyncJournalDb::setFileRecord(const SyncJournalFileRecord &
     _metadataTableIsEmpty = false;
 
     return {};
+}
+
+bool SyncJournalDb::moveFilesInPath(const QByteArray &oldPrefix, const QByteArray &newPrefix)
+{
+    qCInfo(lcDb) << "Moving files from path" << oldPrefix << "to path" << newPrefix;
+
+    if (!checkConnect()) {
+        qCWarning(lcDb) << "Failed to connect database.";
+        return false;
+    }
+
+    const auto query = _queryManager.get(PreparedSqlQueryManager::MoveFilesInPathQuery,
+                                         QByteArrayLiteral("UPDATE metadata"
+                                                           " SET path = REPLACE(path, ?1, ?2), phash = path_hash(path), pathlen = path_length(path)"
+                                                           "  WHERE " IS_PREFIX_PATH_OF("?1", "path")),
+                                         _db);
+    if (!query) {
+        return false;
+    }
+    query->bindValue(1, oldPrefix);
+    query->bindValue(2, newPrefix);
+    return query->exec();
 }
 
 void SyncJournalDb::keyValueStoreSet(const QString &key, QVariant value)

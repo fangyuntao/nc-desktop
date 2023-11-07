@@ -232,6 +232,8 @@ void PropagateRemoteMove::slotMoveJobFinished()
         return;
     }
 
+    const auto result = propagator()->_journal->moveFilesInPath(_item->_originalFile.toUtf8(), _item->_renameTarget.toUtf8());
+
     finalize();
 }
 

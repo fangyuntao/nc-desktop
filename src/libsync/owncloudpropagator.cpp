@@ -527,6 +527,26 @@ void OwncloudPropagator::start(SyncFileItemVector &&items)
     // process each item that is new and is a directory and make sure every parent in its tree has the instruction NEW instead of REMOVE
     adjustDeletedFoldersWithNewChildren(items);
 
+    QString previousFolderPath;
+    auto eraseBeginIt = std::remove_if(std::begin(items), std::end(items), [&previousFolderPath](const SyncFileItemPtr &item) {
+        // we assume items is always sorted such that parent folder go before children
+        if (item->_instruction != CSYNC_INSTRUCTION_RENAME) {
+            previousFolderPath.clear();
+            return false;
+        }
+
+        if (item->isDirectory() && (previousFolderPath.isEmpty() || !item->_originalFile.startsWith(previousFolderPath))) {
+            // if it is a directory and there was no previous directory set, do it now, same for a directory which is not a child of previous directory, assume starting a new hierarchy
+            previousFolderPath = item->_originalFile;
+            return false;
+        }
+
+        // remove only children of previousFolderPath, not previousFolderPath itself such that parent always remains in the vector
+        return item->_originalFile.startsWith(previousFolderPath);
+    });
+
+    items.erase(eraseBeginIt, std::end(items));
+
     resetDelayedUploadTasks();
     _rootJob.reset(new PropagateRootDirectory(this));
     QStack<QPair<QString /* directory name */, PropagateDirectory * /* job */>> directories;
