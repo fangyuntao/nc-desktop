@@ -9,6 +9,8 @@
 			<dict>
 				<key>DEFAULT_INSTALL_LOCATION</key>
 				<string>/</string>
+				<key>BundleIsVersionChecked</key>
+				<false/>
 				<key>HIERARCHY</key>
 				<dict>
 					<key>CHILDREN</key>
