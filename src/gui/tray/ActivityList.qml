@@ -1,8 +1,8 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 
-import Style 1.0
-import com.nextcloud.desktopclient 1.0 as NC
+import Style
+import com.nextcloud.desktopclient as NC
 
 ScrollView {
     id: controlRoot
@@ -126,13 +126,12 @@ ScrollView {
                 verticalAlignment: Image.AlignVCenter
                 horizontalAlignment: Image.AlignHCenter
                 fillMode: Image.PreserveAspectFit
-                source: "image://svgimage-custom-color/activity.svg/" + palette.midlight
+                source: "image://svgimage-custom-color/activity.svg/" + palette.dark
             }
 
             EnforcedPlainTextLabel {
                width: parent.width
                text: qsTr("No activities yet")
-               color: palette.midlight
                font.bold: true
                wrapMode: Text.Wrap
                horizontalAlignment: Text.AlignHCenter

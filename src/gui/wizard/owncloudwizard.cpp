@@ -19,6 +19,10 @@
 #include "theme.h"
 #include "owncloudgui.h"
 
+#ifdef Q_OS_MAC
+#include "foregroundbackground_interface.h"
+#endif
+
 #include "wizard/owncloudwizard.h"
 #include "wizard/welcomepage.h"
 #include "wizard/owncloudsetuppage.h"
@@ -56,6 +60,10 @@ OwncloudWizard::OwncloudWizard(QWidget *parent)
     , _webViewPage(nullptr)
 #endif // WITH_WEBENGINE
 {
+#ifdef Q_OS_MAC
+    auto *fgbg = new ForegroundBackground();
+    this->installEventFilter(fgbg);
+#endif
     setObjectName("owncloudWizard");
 
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -398,6 +406,21 @@ void OwncloudWizard::changeEvent(QEvent *e)
     }
 
     QWizard::changeEvent(e);
+}
+
+void OwncloudWizard::hideEvent(QHideEvent *event)
+{
+    QWizard::hideEvent(event);
+#ifdef Q_OS_MACOS
+    // Closing the window on macOS hides it rather than closes it, so emit a wizardClosed here
+    emit wizardClosed();
+#endif
+}
+
+void OwncloudWizard::closeEvent(QCloseEvent *event)
+{
+    emit wizardClosed();
+    QWizard::closeEvent(event);
 }
 
 void OwncloudWizard::customizeStyle()

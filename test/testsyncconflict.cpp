@@ -45,7 +45,7 @@ bool expectAndWipeConflict(FileModifier &local, FileInfo state, const QString pa
     auto base = state.find(pathComponents.parentDirComponents());
     if (!base)
         return false;
-    for (const auto &item : qAsConst(base->children)) {
+    for (const auto &item : std::as_const(base->children)) {
         if (item.name.startsWith(pathComponents.fileName()) && item.name.contains("(conflicted copy")) {
             local.remove(item.path());
             return true;
@@ -66,6 +66,14 @@ class TestSyncConflict : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase()
+    {
+        OCC::Logger::instance()->setLogFlush(true);
+        OCC::Logger::instance()->setLogDebug(true);
+
+        QStandardPaths::setTestModeEnabled(true);
+    }
+
     void testNoUpload()
     {
         FakeFolder fakeFolder{ FileInfo::A12_B12_C12_S12() };

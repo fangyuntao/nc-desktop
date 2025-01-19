@@ -24,6 +24,7 @@ public:
                          const QString &path,
                          const QString &remoteSyncPathWithTrailingSlash,
                          const QString &localSyncPath,
+                         const QString &etag,
                          const SyncFileItem::LockStatus requestedLockState,
                          const SyncFileItem::LockOwnerType lockOwnerType,
                          QObject *parent = nullptr);
@@ -59,8 +60,10 @@ private:
     QByteArray _etag;
     qint64 _lockTime = 0;
     qint64 _lockTimeout = 0;
+    QString _lockToken;
     QString _remoteSyncPathWithTrailingSlash;
     QString _localSyncPath;
+    QString _existingEtag;
 };
 
 }

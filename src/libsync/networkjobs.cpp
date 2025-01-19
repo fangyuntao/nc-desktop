@@ -280,21 +280,21 @@ bool LsColXMLParser::parse(const QByteArray &xml, QHash<QString, ExtraFolderInfo
         // End elements with DAV:
         if (type == QXmlStreamReader::EndElement) {
             if (reader.namespaceUri() == QLatin1String("DAV:")) {
-                if (reader.name() == "response") {
+                if (reader.name() == QStringLiteral("response")) {
                     if (currentHref.endsWith('/')) {
                         currentHref.chop(1);
                     }
                     emit directoryListingIterated(currentHref, currentHttp200Properties);
                     currentHref.clear();
                     currentHttp200Properties.clear();
-                } else if (reader.name() == "propstat") {
+                } else if (reader.name() == QStringLiteral("propstat")) {
                     insidePropstat = false;
                     if (currentPropsHaveHttp200) {
                         currentHttp200Properties = QMap<QString, QString>(currentTmpProperties);
                     }
                     currentTmpProperties.clear();
                     currentPropsHaveHttp200 = false;
-                } else if (reader.name() == "prop") {
+                } else if (reader.name() == QStringLiteral("prop")) {
                     insideProp = false;
                 }
             }
@@ -663,12 +663,9 @@ bool PropfindJob::finished()
     if (http_result_code == 207) {
         // Parse DAV response
         auto domDocument = QDomDocument();
-        auto errorMsg = QString();
-        auto errorLine = -1;
-        auto errorColumn = -1;
 
-        if (!domDocument.setContent(reply(), true, &errorMsg, &errorLine, &errorColumn)) {
-            qCWarning(lcPropfindJob) << "XML parser error: " << errorMsg << errorLine << errorColumn;
+        if (const auto res = domDocument.setContent(reply(), QDomDocument::ParseOption::UseNamespaceProcessing); !res) {
+            qCWarning(lcPropfindJob) << "XML parser error: " << res.errorMessage << res.errorLine << res.errorColumn;
             emit finishedWithError(reply());
 
         } else {
@@ -1002,8 +999,9 @@ bool JsonApiJob::finished()
     }
 
     // save new ETag value
-    if(reply()->rawHeaderList().contains("ETag"))
-        emit etagResponseHeaderReceived(reply()->rawHeader("ETag"), statusCode);
+    if (const auto etagHeader = reply()->header(QNetworkRequest::ETagHeader); etagHeader.isValid()) {
+        emit etagResponseHeaderReceived(etagHeader.toByteArray(), statusCode);
+    }
 
     QJsonParseError error{};
     auto json = QJsonDocument::fromJson(jsonStr.toUtf8(), &error);

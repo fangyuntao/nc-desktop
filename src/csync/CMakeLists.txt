@@ -72,7 +72,7 @@ generate_export_header(nextcloud_csync
 target_link_libraries(nextcloud_csync
   PUBLIC
   ${CSYNC_REQUIRED_LIBRARIES}
-  Qt5::Core Qt5::Concurrent
+  Qt::Core Qt::Concurrent
 )
 
 if(ZLIB_FOUND)
@@ -126,6 +126,10 @@ else()
   RUNTIME DESTINATION
     ${CMAKE_INSTALL_BINDIR}
   )
+endif()
+
+if (WIN32)
+    install(FILES $<TARGET_PDB_FILE:nextcloud_csync> DESTINATION bin OPTIONAL)
 endif()
 
 configure_file(config_csync.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config_csync.h)

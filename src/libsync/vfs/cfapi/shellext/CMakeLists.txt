@@ -185,7 +185,7 @@ endif()
 
 add_dependencies(CfApiShellExtensions CustomStateProviderImpl)
 
-target_link_libraries(CfApiShellExtensions shlwapi Gdiplus onecoreuap Nextcloud::csync Qt5::Core Qt5::Network)
+target_link_libraries(CfApiShellExtensions shlwapi Gdiplus onecoreuap Nextcloud::csync Qt::Core Qt::Network)
 
 target_include_directories(CfApiShellExtensions PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(CfApiShellExtensions PRIVATE ${GeneratedFilesPath})
@@ -210,5 +210,7 @@ install(TARGETS CfApiShellExtensions
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+install(FILES $<TARGET_PDB_FILE:CfApiShellExtensions> DESTINATION bin OPTIONAL)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configvfscfapishellext.h.in ${CMAKE_CURRENT_BINARY_DIR}/configvfscfapishellext.h)

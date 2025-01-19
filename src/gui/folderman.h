@@ -101,7 +101,7 @@ public:
     Folder *addFolder(AccountState *accountState, const FolderDefinition &folderDefinition);
 
     /** Removes a folder */
-    void removeFolder(Folder *);
+    void removeFolder(Folder *folderToRemove);
 
     /** Returns the folder which the file or directory stored in path is in */
     Folder *folderForPath(const QString &path);
@@ -137,11 +137,10 @@ public:
     bool startFromScratch(const QString &);
 
     /// Produce text for use in the tray tooltip
-    static QString trayTooltipStatusString(SyncResult::Status syncStatus, bool hasUnresolvedConflicts, bool paused);
+    static QString trayTooltipStatusString(SyncResult::Status syncStatus, bool hasUnresolvedConflicts, bool paused, ProgressInfo *progress);
 
     /// Compute status summarizing multiple folders
-    static void trayOverallStatus(const QList<Folder *> &folders,
-        SyncResult::Status *status, bool *unresolvedConflicts);
+    static void trayOverallStatus(const QList<Folder *> &folders, SyncResult::Status *status, bool *unresolvedConflicts, ProgressInfo **overallProgressInfo);
 
     // Escaping of the alias which is used in QSettings AND the file
     // system, thus need to be escaped.
@@ -227,10 +226,16 @@ public:
 
     void setDirtyProxy();
     void setDirtyNetworkLimits();
+    void setDirtyNetworkLimits(const AccountPtr &account) const;
 
     /** removes current user from the share **/
     void leaveShare(const QString &localFile);
 
+    /** Whether or not vfs is supported in the location. */
+    [[nodiscard]] bool checkVfsAvailability(const QString &path, Vfs::Mode mode = bestAvailableVfsMode()) const;
+
+    /** If the folder configuration is no longer supported this will return an error string */
+    [[nodiscard]] Result<void, QString> unsupportedConfiguration(const QString &path) const;
 signals:
     /**
       * signal to indicate a folder has changed its sync state.

@@ -44,6 +44,12 @@ constexpr auto settingsAccountsC = "Accounts";
 constexpr auto settingsFoldersC = "Folders";
 constexpr auto settingsVersionC = "version";
 constexpr auto maxFoldersVersion = 1;
+
+int numberOfSyncJournals(const QString &path)
+{
+    return QDir(path).entryList({ QStringLiteral(".sync_*.db"), QStringLiteral("._sync_*.db") }, QDir::Hidden | QDir::Files).size();
+}
+
 }
 
 namespace OCC {
@@ -220,7 +226,7 @@ int FolderMan::setupFolders()
 
     emit folderListChanged(_folderMap);
 
-    for (const auto folder : qAsConst(_folderMap)) {
+    for (const auto folder : std::as_const(_folderMap)) {
         folder->processSwitchedToVirtualFiles();
     }
 
@@ -762,7 +768,7 @@ void FolderMan::slotRunOneEtagJob()
 {
     if (_currentEtagJob.isNull()) {
         Folder *folder = nullptr;
-        for (Folder *f : qAsConst(_folderMap)) {
+        for (Folder *f : std::as_const(_folderMap)) {
             if (f->etagJob()) {
                 // Caveat: always grabs the first folder with a job, but we think this is Ok for now and avoids us having a separate queue.
                 _currentEtagJob = f->etagJob();
@@ -892,7 +898,7 @@ void FolderMan::startScheduledSyncSoon()
 void FolderMan::slotStartScheduledFolderSync()
 {
     if (isAnySyncRunning()) {
-        for (auto f : qAsConst(_folderMap)) {
+        for (auto f : std::as_const(_folderMap)) {
             if (f->isSyncRunning())
                 qCInfo(lcFolderMan) << "Currently folder " << f->remoteUrl().toString() << " is running, wait for finish!";
         }
@@ -1022,12 +1028,12 @@ void FolderMan::runEtagJobIfPossible(Folder *folder)
 void FolderMan::slotAccountRemoved(AccountState *accountState)
 {
     QVector<Folder *> foldersToRemove;
-    for (const auto &folder : qAsConst(_folderMap)) {
+    for (const auto &folder : std::as_const(_folderMap)) {
         if (folder->accountState() == accountState) {
             foldersToRemove.push_back(folder);
         }
     }
-    for (const auto &folder : qAsConst(foldersToRemove)) {
+    for (const auto &folder : std::as_const(foldersToRemove)) {
         removeFolder(folder);
     }
 }
@@ -1044,7 +1050,7 @@ void FolderMan::slotRemoveFoldersForAccount(AccountState *accountState)
         }
     }
 
-    for (const auto &f : qAsConst(foldersToRemove)) {
+    for (const auto &f : std::as_const(foldersToRemove)) {
         removeFolder(f);
     }
     emit folderListChanged(_folderMap);
@@ -1064,7 +1070,7 @@ void FolderMan::slotServerVersionChanged(Account *account)
         qCWarning(lcFolderMan) << "The server version is unsupported:" << account->serverVersion()
                                << "pausing all folders on the account";
 
-        for (auto &f : qAsConst(_folderMap)) {
+        for (auto &f : std::as_const(_folderMap)) {
             if (f->accountState()->account().data() == account) {
                 f->setSyncPaused(true);
             }
@@ -1082,7 +1088,7 @@ void FolderMan::slotWatchedFileUnlocked(const QString &path)
 
 void FolderMan::slotScheduleFolderByTime()
 {
-    for (const auto &f : qAsConst(_folderMap)) {
+    for (const auto &f : std::as_const(_folderMap)) {
         // Never schedule if syncing is disabled or when we're currently
         // querying the server for etags
         if (!f->canSync() || f->etagJob()) {
@@ -1319,48 +1325,51 @@ QStringList FolderMan::findFileInLocalFolders(const QString &relPath, const Acco
             continue;
 
         QString path = folder->cleanPath() + '/';
-        path += serverPath.midRef(folder->remotePathTrailingSlash().length());
-        if (QFile::exists(path)) {
+        path += serverPath.mid(folder->remotePathTrailingSlash().length());
+        if (FileSystem::fileExists(path)) {
             re.append(path);
         }
     }
     return re;
 }
 
-void FolderMan::removeFolder(Folder *f)
+void FolderMan::removeFolder(Folder *folderToRemove)
 {
-    if (!f) {
+    if (!folderToRemove) {
         qCCritical(lcFolderMan) << "Can not remove null folder";
         return;
     }
 
-    qCInfo(lcFolderMan) << "Removing " << f->alias();
+    qCInfo(lcFolderMan) << "Removing " << folderToRemove->alias();
 
-    const bool currentlyRunning = f->isSyncRunning();
+    const bool currentlyRunning = folderToRemove->isSyncRunning();
     if (currentlyRunning) {
         // abort the sync now
-        f->slotTerminateSync();
+        folderToRemove->slotTerminateSync();
     }
 
-    if (_scheduledFolders.removeAll(f) > 0) {
+    if (_scheduledFolders.removeAll(folderToRemove) > 0) {
         emit scheduleQueueChanged();
     }
 
-    f->setSyncPaused(true);
-    f->wipeForRemoval();
+    folderToRemove->setSyncPaused(true);
+    folderToRemove->wipeForRemoval();
 
     // remove the folder configuration
-    f->removeFromSettings();
+    folderToRemove->removeFromSettings();
 
-    unloadFolder(f);
+    // remove Desktop.ini
+    Utility::removeFavLink(folderToRemove->path());
+
+    unloadFolder(folderToRemove);
     if (currentlyRunning) {
         // We want to schedule the next folder once this is done
-        connect(f, &Folder::syncFinished,
+        connect(folderToRemove, &Folder::syncFinished,
             this, &FolderMan::slotFolderSyncFinished);
         // Let the folder delete itself when done.
-        connect(f, &Folder::syncFinished, f, &QObject::deleteLater);
+        connect(folderToRemove, &Folder::syncFinished, folderToRemove, &QObject::deleteLater);
     } else {
-        delete f;
+        delete folderToRemove;
     }
 
     _navigationPaneHelper.scheduleUpdateCloudStorageRegistry();
@@ -1453,7 +1462,7 @@ void FolderMan::slotWipeFolderForAccount(AccountState *accountState)
     }
 
     bool success = false;
-    for (const auto &f : qAsConst(foldersToRemove)) {
+    for (const auto &f : std::as_const(foldersToRemove)) {
         if (!f) {
             qCCritical(lcFolderMan) << "Can not remove null folder";
             return;
@@ -1511,13 +1520,14 @@ void FolderMan::setDirtyProxy()
 {
     const auto folderMapValues = _folderMap.values();
     for (const auto folder : folderMapValues) {
-        if (folder) {
-            if (folder->accountState() && folder->accountState()->account()
-                && folder->accountState()->account()->networkAccessManager()) {
-                // Need to do this so we do not use the old determined system proxy
-                folder->accountState()->account()->networkAccessManager()->setProxy(
-                    QNetworkProxy(QNetworkProxy::DefaultProxy));
-            }
+        if (folder 
+            && folder->accountState() 
+            && folder->accountState()->account()
+            && folder->accountState()->account()->networkAccessManager()
+            && folder->accountState()->account()->networkProxySetting() == Account::AccountNetworkProxySetting::GlobalProxy) {
+            // Need to do this so we do not use the old determined system proxy
+            const auto proxy = QNetworkProxy(QNetworkProxy::DefaultProxy);
+            folder->accountState()->account()->networkAccessManager()->setProxy(proxy);
         }
     }
 }
@@ -1533,11 +1543,22 @@ void FolderMan::setDirtyNetworkLimits()
     }
 }
 
+void FolderMan::setDirtyNetworkLimits(const AccountPtr &account) const
+{
+    const auto folderMapValues = _folderMap.values();
+    for (const auto folder : folderMapValues) {
+        // set only in busy folders. Otherwise they read the config anyway.
+        if (folder && folder->isBusy() && folder->accountState()->account() == account) {
+            folder->setDirtyNetworkLimits();
+        }
+    }
+}
+
 void FolderMan::leaveShare(const QString &localFile)
 {
     const auto localFileNoTrailingSlash = localFile.endsWith('/') ? localFile.chopped(1) : localFile;
     if (const auto folder = FolderMan::instance()->folderForPath(localFileNoTrailingSlash)) {
-        const auto filePathRelative = QString(localFileNoTrailingSlash).remove(folder->path());
+        const auto filePathRelative = Utility::noLeadingSlashPath(QString(localFileNoTrailingSlash).remove(folder->path()));
 
         SyncJournalFileRecord rec;
         if (folder->journalDb()->getFileRecord(filePathRelative, &rec)
@@ -1551,8 +1572,7 @@ void FolderMan::leaveShare(const QString &localFile)
                                                                                  folder->journalDb(),
                                                                                  folder->remotePath(),
                                                                                  UpdateE2eeFolderUsersMetadataJob::Remove,
-                //TODO: Might need to add a slash to "filePathRelative" once the server is working
-                                                                                 filePathRelative,
+                                                                                 folder->remotePathTrailingSlash() + filePathRelative,
                                                                                  folder->accountState()->account()->davUser());
             _removeE2eeShareJob->setParent(this);
             _removeE2eeShareJob->start(true);
@@ -1599,21 +1619,24 @@ void FolderMan::slotLeaveShare(const QString &localFile, const QByteArray &folde
 }
 
 void FolderMan::trayOverallStatus(const QList<Folder *> &folders,
-    SyncResult::Status *status, bool *unresolvedConflicts)
+                                  SyncResult::Status *status,
+                                  bool *unresolvedConflicts,
+                                  ProgressInfo **const overallProgressInfo)
 {
     *status = SyncResult::Undefined;
     *unresolvedConflicts = false;
 
-    int cnt = folders.count();
+    const auto cnt = folders.count();
 
-    // if one folder: show the state of the one folder.
+    // if one folder: show the state of the one folder along with the sync status.
     // if more folders:
     // if one of them has an error -> show error
     // if one is paused, but others ok, show ok
     // do not show "problem" in the tray
+    // and do not show sync status
     //
     if (cnt == 1) {
-        Folder *folder = folders.at(0);
+        const auto folder = folders.at(0);
         if (folder) {
             auto syncResult = folder->syncResult();
             if (folder->syncPaused()) {
@@ -1633,60 +1656,74 @@ void FolderMan::trayOverallStatus(const QList<Folder *> &folders,
                 }
             }
             *unresolvedConflicts = syncResult.hasUnresolvedConflicts();
+            *overallProgressInfo = folder->syncEngine().progressInfo();
         }
     } else {
-        int errorsSeen = 0;
-        int goodSeen = 0;
-        int abortOrPausedSeen = 0;
-        int runSeen = 0;
+        auto errorsSeen = false;
+        auto goodSeen = false;
+        auto abortOrPausedSeen = false;
+        auto runSeen = false;
+        auto various = false;
 
-        for (const Folder *folder : qAsConst(folders)) {
-            SyncResult folderResult = folder->syncResult();
+        for (const Folder *folder : std::as_const(folders)) {
+            // We've already seen an error, worst case met.
+            // No need to check the remaining folders.
+            if (errorsSeen) {
+                break;
+            }
+
+            const auto folderResult = folder->syncResult();
+
             if (folder->syncPaused()) {
-                abortOrPausedSeen++;
+                abortOrPausedSeen = true;
             } else {
-                SyncResult::Status syncStatus = folderResult.status();
+                const auto syncStatus = folderResult.status();
 
                 switch (syncStatus) {
                 case SyncResult::Undefined:
                 case SyncResult::NotYetStarted:
+                    various = true;
                     break;
                 case SyncResult::SyncPrepare:
                 case SyncResult::SyncRunning:
-                    runSeen++;
+                    runSeen = true;
                     break;
                 case SyncResult::Problem: // don't show the problem icon in tray.
                 case SyncResult::Success:
-                    goodSeen++;
+                    goodSeen = true;
                     break;
                 case SyncResult::Error:
                 case SyncResult::SetupError:
-                    errorsSeen++;
+                    errorsSeen = true;
                     break;
                 case SyncResult::SyncAbortRequested:
                 case SyncResult::Paused:
-                    abortOrPausedSeen++;
+                    abortOrPausedSeen = true;
                     // no default case on purpose, check compiler warnings
                 }
             }
-            if (folderResult.hasUnresolvedConflicts())
+
+            if (folderResult.hasUnresolvedConflicts()) {
                 *unresolvedConflicts = true;
+            }
         }
-        if (errorsSeen > 0) {
+
+        if (errorsSeen) {
             *status = SyncResult::Error;
-        } else if (abortOrPausedSeen > 0 && abortOrPausedSeen == cnt) {
+        } else if (abortOrPausedSeen) {
             // only if all folders are paused
             *status = SyncResult::Paused;
-        } else if (runSeen > 0) {
+        } else if (runSeen) {
             *status = SyncResult::SyncRunning;
-        } else if (goodSeen > 0) {
+        } else if (goodSeen) {
             *status = SyncResult::Success;
+        } else if (various) {
+            *status = SyncResult::Undefined;
         }
     }
 }
 
-QString FolderMan::trayTooltipStatusString(
-    SyncResult::Status syncStatus, bool hasUnresolvedConflicts, bool paused)
+QString FolderMan::trayTooltipStatusString(SyncResult::Status syncStatus, bool hasUnresolvedConflicts, bool paused, ProgressInfo *const progress)
 {
     QString folderMessage;
     switch (syncStatus) {
@@ -1700,6 +1737,35 @@ QString FolderMan::trayTooltipStatusString(
         folderMessage = tr("Preparing for sync.");
         break;
     case SyncResult::SyncRunning:
+        if (progress && progress->status() == ProgressInfo::Propagation) {
+            const auto estimatedEta = progress->totalProgress().estimatedEta;
+            if (progress->totalSize() == 0) {
+                qint64 currentFile = progress->currentFile();
+                qint64 totalFileCount = qMax(progress->totalFiles(), currentFile);
+                if (progress->trustEta()) {
+                    if (estimatedEta == 0) {
+                        folderMessage = tr("Syncing %1 of %2 (A few seconds left)").arg(currentFile).arg(totalFileCount);
+                    } else {
+                        folderMessage =
+                            tr("Syncing %1 of %2 (%3 left)").arg(currentFile).arg(totalFileCount).arg(Utility::durationToDescriptiveString1(estimatedEta));
+                    }
+                } else {
+                    folderMessage = tr("Syncing %1 of %2").arg(currentFile).arg(totalFileCount);
+                }
+            } else {
+                QString totalSizeStr = Utility::octetsToString(progress->totalSize());
+                if (progress->trustEta()) {
+                    if (estimatedEta == 0) {
+                        folderMessage = tr("Syncing %1 (A few seconds left)").arg(totalSizeStr);
+                    } else {
+                        folderMessage = tr("Syncing %1 (%2 left)").arg(totalSizeStr, Utility::durationToDescriptiveString1(estimatedEta));
+                    }
+                } else {
+                    folderMessage = tr("Syncing %1").arg(totalSizeStr);
+                }
+            }
+            break;
+        }
         folderMessage = tr("Sync is running.");
         break;
     case SyncResult::Success:
@@ -1740,20 +1806,23 @@ static QString checkPathValidityRecursive(const QString &path)
     Utility::NtfsPermissionLookupRAII ntfs_perm;
 #endif
     const QFileInfo selFile(path);
+    if (numberOfSyncJournals(selFile.filePath()) != 0) {
+        return FolderMan::tr("The folder %1 is used in a folder sync connection!").arg(QDir::toNativeSeparators(selFile.filePath()));
+    }
 
-    if (!selFile.exists()) {
+    if (!FileSystem::fileExists(path)) {
         QString parentPath = selFile.dir().path();
         if (parentPath != path)
             return checkPathValidityRecursive(parentPath);
         return FolderMan::tr("The selected path does not exist!");
     }
 
-    if (!selFile.isDir()) {
+    if (!FileSystem::isDir(path)) {
         return FolderMan::tr("The selected path is not a folder!");
     }
 
     #ifdef Q_OS_WIN
-    if (!selFile.isWritable()) {
+    if (!FileSystem::isWritable(path)) {
         // isWritable() doesn't cover all NTFS permissions
         // try creating and removing a test file, and make sure it is excluded from sync
         if (!Utility::canCreateFileInPath(path)) {
@@ -1761,7 +1830,7 @@ static QString checkPathValidityRecursive(const QString &path)
         }
     }
     #else
-    if (!selFile.isWritable()) {
+    if (!FileSystem::isWritable(path)) {
         return FolderMan::tr("You have no permission to write to the selected folder!");
     }
     #endif
@@ -1774,7 +1843,7 @@ static QString checkPathValidityRecursive(const QString &path)
 static QString canonicalPath(const QString &path)
 {
     QFileInfo selFile(path);
-    if (!selFile.exists()) {
+    if (!FileSystem::fileExists(path)) {
         const auto parentPath = selFile.dir().path();
 
         // It's possible for the parentPath to match the path
@@ -1867,7 +1936,7 @@ QString FolderMan::findGoodPathForNewSyncFolder(const QString &basePath, const Q
     int attempt = 1;
     forever {
         const auto isGood = FolderMan::instance()->checkPathValidityForNewFolder(folder, serverUrl).second.isEmpty() &&
-            (allowExisting == GoodPathStrategy::AllowOverrideExistingPath || !QFileInfo::exists(folder));
+            (allowExisting == GoodPathStrategy::AllowOverrideExistingPath || !FileSystem::fileExists(folder));
         if (isGood) {
             break;
         }
@@ -1898,7 +1967,7 @@ void FolderMan::setIgnoreHiddenFiles(bool ignore)
 {
     // Note that the setting will revert to 'true' if all folders
     // are deleted...
-    for (Folder *folder : qAsConst(_folderMap)) {
+    for (Folder *folder : std::as_const(_folderMap)) {
         folder->setIgnoreHiddenFiles(ignore);
         folder->saveToSettings();
     }
@@ -1946,7 +2015,7 @@ void FolderMan::slotProcessFilesPushNotification(Account *account)
 {
     qCInfo(lcFolderMan) << "Got files push notification for account" << account;
 
-    for (auto folder : qAsConst(_folderMap)) {
+    for (auto folder : std::as_const(_folderMap)) {
         // Just run on the folders that belong to this account
         if (folder->accountState()->account() != account) {
             continue;
@@ -1965,6 +2034,23 @@ void FolderMan::slotConnectToPushNotifications(Account *account)
         qCInfo(lcFolderMan) << "Push notifications ready";
         connect(pushNotifications, &PushNotifications::filesChanged, this, &FolderMan::slotProcessFilesPushNotification, Qt::UniqueConnection);
     }
+}
+
+bool FolderMan::checkVfsAvailability(const QString &path, Vfs::Mode mode) const
+{
+    return unsupportedConfiguration(path) && Vfs::checkAvailability(path, mode);
+}
+
+Result<void, QString> FolderMan::unsupportedConfiguration(const QString &path) const
+{
+    if (numberOfSyncJournals(path) > 1) {
+        return tr("The folder %1 is linked to multiple accounts.\n"
+                  "This setup can cause data loss and it is no longer supported.\n"
+                  "To resolve this issue: please remove %1 from one of the accounts and create a new sync folder.\n"
+                  "For advanced users: this issue might be related to multiple sync database files found in one folder. Please check %1 for outdated and unused .sync_*.db files and remove them.")
+            .arg(path);
+    }
+    return {};
 }
 
 } // namespace OCC

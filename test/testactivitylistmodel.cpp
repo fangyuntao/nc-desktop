@@ -89,6 +89,11 @@ public:
 private slots:
     void initTestCase()
     {
+        OCC::Logger::instance()->setLogFlush(true);
+        OCC::Logger::instance()->setLogDebug(true);
+
+        QStandardPaths::setTestModeEnabled(true);
+
         fakeQnam.reset(new FakeQNAM({}));
         account = OCC::Account::create();
         account->setCredentials(new FakeCredentials{fakeQnam.data()});
@@ -220,8 +225,7 @@ private slots:
 
             QVERIFY(!index.data(OCC::ActivityListModel::AccountRole).toString().isEmpty());
             QVERIFY(!index.data(OCC::ActivityListModel::ActionTextColorRole).toString().isEmpty());
-            QVERIFY(!index.data(OCC::ActivityListModel::DarkIconRole).toString().isEmpty());
-            QVERIFY(!index.data(OCC::ActivityListModel::LightIconRole).toString().isEmpty());
+            QVERIFY(!index.data(OCC::ActivityListModel::IconRole).toString().isEmpty());
             QVERIFY(!index.data(OCC::ActivityListModel::PointInTimeRole).toString().isEmpty());
 
             QVERIFY(index.data(OCC::ActivityListModel::ObjectTypeRole).canConvert<int>());
@@ -295,6 +299,14 @@ private slots:
                         QVERIFY(actionsLinks.size() == 1);
                         QVERIFY(!actionsLinks[0].value<OCC::ActivityLink>()._primary);
                         QVERIFY(actionsLinksContextMenu.isEmpty());
+                    }
+
+                    // remote shares must have 'Accept' and 'Decline' actions
+                    if (objectType == QStringLiteral("remote_share")) {
+                        QVERIFY(actionsLinks.size() == 2);
+                        QVERIFY(actionsLinks[0].value<OCC::ActivityLink>()._primary);
+                        QVERIFY(actionsLinks[0].value<OCC::ActivityLink>()._verb == QStringLiteral("POST"));
+                        QVERIFY(actionsLinks[1].value<OCC::ActivityLink>()._verb == QStringLiteral("DELETE"));
                     }
 
                     if ((objectType == QStringLiteral("chat") || objectType == QStringLiteral("call")

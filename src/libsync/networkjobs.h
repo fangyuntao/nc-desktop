@@ -16,14 +16,16 @@
 #ifndef NETWORKJOBS_H
 #define NETWORKJOBS_H
 
-#include <QBuffer>
+#include "config.h"
 
 #include "abstractnetworkjob.h"
 
 #include "common/result.h"
 
+#include <QBuffer>
+#include <QUrlQuery>
+
 class QUrl;
-class QUrlQuery;
 class QJsonObject;
 class QJsonDocument;
 class QDomDocument;

@@ -30,6 +30,7 @@ LockFileJob::LockFileJob(const AccountPtr account,
                          const QString &path,
                          const QString &remoteSyncPathWithTrailingSlash,
                          const QString &localSyncPath,
+                         const QString &etag,
                          const SyncFileItem::LockStatus requestedLockState,
                          const SyncFileItem::LockOwnerType lockOwnerType,
                          QObject *parent)
@@ -39,6 +40,7 @@ LockFileJob::LockFileJob(const AccountPtr account,
     , _requestedLockOwnerType(lockOwnerType)
     , _remoteSyncPathWithTrailingSlash(remoteSyncPathWithTrailingSlash)
     , _localSyncPath(localSyncPath)
+    , _existingEtag(etag)
 {
     if (!_localSyncPath.endsWith(QLatin1Char('/'))) {
         _localSyncPath.append(QLatin1Char('/'));
@@ -47,7 +49,9 @@ LockFileJob::LockFileJob(const AccountPtr account,
 
 void LockFileJob::start()
 {
-    qCInfo(lcLockFileJob()) << "start" << path() << _requestedLockState;
+    qCInfo(lcLockFileJob()) << "start with path:" << path()
+                            << "lock state:" <<  _requestedLockState
+                            << "lock owner type:" << _requestedLockOwnerType;
 
     QNetworkRequest request;
     request.setRawHeader(QByteArrayLiteral("X-User-Lock"), QByteArrayLiteral("1"));
@@ -63,8 +67,12 @@ void LockFileJob::start()
     switch(_requestedLockState)
     {
     case SyncFileItem::LockStatus::LockedItem:
+    {
+        const auto etagValue = QLatin1String("\"%1\"").arg(_existingEtag.toLatin1());
+        request.setRawHeader(QByteArrayLiteral("If-Match"), etagValue.toLatin1());
         verb = "LOCK";
         break;
+    }
     case SyncFileItem::LockStatus::UnlockedItem:
         verb = "UNLOCK";
         break;
@@ -77,7 +85,7 @@ void LockFileJob::start()
 bool LockFileJob::finished()
 {
     if (reply()->error() != QNetworkReply::NoError) {
-        qCInfo(lcLockFileJob()) << "finished with error" << reply()->error() << reply()->errorString();
+        qCInfo(lcLockFileJob()) << "finished with error" << reply()->error() << reply()->errorString() << _requestedLockState << _requestedLockOwnerType << _existingEtag;
         const auto httpErrorCode = reply()->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         if (httpErrorCode == LOCKED_HTTP_ERROR_CODE) {
             const auto record = handleReply();
@@ -97,7 +105,7 @@ bool LockFileJob::finished()
             Q_EMIT finishedWithError(httpErrorCode, reply()->errorString(), {});
         }
     } else {
-        qCInfo(lcLockFileJob()) << "success" << path();
+        qCInfo(lcLockFileJob()) << "success" << path() << _requestedLockState << _requestedLockOwnerType;
         handleReply();
         Q_EMIT finishedWithoutError();
     }
@@ -113,6 +121,7 @@ void LockFileJob::setFileRecordLocked(SyncJournalFileRecord &record) const
     record._lockstate._lockEditorApp = _editorName;
     record._lockstate._lockTime = _lockTime;
     record._lockstate._lockTimeout = _lockTimeout;
+    record._lockstate._lockToken = _lockToken;
     if (!_etag.isEmpty()) {
         record._etag = _etag;
     }
@@ -127,6 +136,7 @@ void LockFileJob::resetState()
     _userId.clear();
     _lockTime = 0;
     _lockTimeout = 0;
+    _lockToken.clear();
 }
 
 SyncJournalFileRecord LockFileJob::handleReply()
@@ -239,6 +249,8 @@ void LockFileJob::decodeStartElement(const QString &name,
         _editorName = reader.readElementText();
     } else if (name == QStringLiteral("getetag")) {
         _etag = reader.readElementText().toUtf8();
+    } else if (name == QStringLiteral("lock-token")) {
+        _lockToken = reader.readElementText();
     }
 }
 

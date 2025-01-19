@@ -125,11 +125,13 @@ SyncJournalFileRecord SyncFileItem::toSyncJournalFileRecordWithInode(const QStri
     rec._lockstate._lockEditorApp = _lockEditorApp;
     rec._lockstate._lockTime = _lockTime;
     rec._lockstate._lockTimeout = _lockTimeout;
+    rec._lockstate._lockToken = _lockToken;
+    rec._isLivePhoto = _isLivePhoto;
+    rec._livePhotoFile = _livePhotoFile;
 
     // Update the inode if possible
     rec._inode = _inode;
     if (FileSystem::getInode(localFileName, &rec._inode)) {
-        qCDebug(lcFileItem) << localFileName << "Retrieved inode " << rec._inode << "(previous item inode: " << _inode << ")";
     } else {
         // use the "old" inode coming with the item for the case where the
         // filesystem stat fails. That can happen if the the file was removed
@@ -163,13 +165,16 @@ SyncFileItemPtr SyncFileItem::fromSyncJournalFileRecord(const SyncJournalFileRec
     item->_lockEditorApp = rec._lockstate._lockEditorApp;
     item->_lockTime = rec._lockstate._lockTime;
     item->_lockTimeout = rec._lockstate._lockTimeout;
+    item->_lockToken = rec._lockstate._lockToken;
     item->_sharedByMe = rec._sharedByMe;
     item->_isShared = rec._isShared;
     item->_lastShareStateFetchedTimestamp = rec._lastShareStateFetchedTimestamp;
+    item->_isLivePhoto = rec._isLivePhoto;
+    item->_livePhotoFile = rec._livePhotoFile;
     return item;
 }
 
-SyncFileItemPtr SyncFileItem::fromProperties(const QString &filePath, const QMap<QString, QString> &properties)
+SyncFileItemPtr SyncFileItem::fromProperties(const QString &filePath, const QMap<QString, QString> &properties, RemotePermissions::MountedPermissionAlgorithm algorithm)
 {
     SyncFileItemPtr item(new SyncFileItem);
     item->_file = filePath;
@@ -182,7 +187,7 @@ SyncFileItemPtr SyncFileItem::fromProperties(const QString &filePath, const QMap
     item->_fileId = properties.value(QStringLiteral("id")).toUtf8();
 
     if (properties.contains(QStringLiteral("permissions"))) {
-        item->_remotePerm = RemotePermissions::fromServerString(properties.value("permissions"));
+        item->_remotePerm = RemotePermissions::fromServerString(properties.value("permissions"), algorithm, properties);
     }
 
     if (!properties.value(QStringLiteral("share-types")).isEmpty()) {
@@ -220,6 +225,8 @@ SyncFileItemPtr SyncFileItem::fromProperties(const QString &filePath, const QMap
         item->_lockTimeout = ok ? intConvertedValue : 0;
     }
 
+    item->_lockToken = properties.value(QStringLiteral("lock-token"));
+
     const auto date = QDateTime::fromString(properties.value(QStringLiteral("getlastmodified")), Qt::RFC2822Date);
     Q_ASSERT(date.isValid());
     if (date.toSecsSinceEpoch() > 0) {
@@ -232,6 +239,11 @@ SyncFileItemPtr SyncFileItem::fromProperties(const QString &filePath, const QMap
 
     if (properties.contains(QStringLiteral("checksums"))) {
         item->_checksumHeader = findBestChecksum(properties.value("checksums").toUtf8());
+    }
+
+    if (properties.contains(QStringLiteral("metadata-files-live-photo"))) {
+        item->_isLivePhoto = true;
+        item->_livePhotoFile = properties.value(QStringLiteral("metadata-files-live-photo"));
     }
 
     // direction and instruction are decided later
@@ -250,6 +262,7 @@ void SyncFileItem::updateLockStateFromDbRecord(const SyncJournalFileRecord &dbRe
     _lockEditorApp = dbRecord._lockstate._lockEditorApp;
     _lockTime = dbRecord._lockstate._lockTime;
     _lockTimeout = dbRecord._lockstate._lockTimeout;
+    _lockToken = dbRecord._lockstate._lockToken;
 }
 
 }

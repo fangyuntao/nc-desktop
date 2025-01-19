@@ -12,13 +12,13 @@
  * for more details.
  */
 
-import QtQuick 2.15
-import QtQuick.Window 2.15
-import QtQuick.Layouts 1.2
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Window
+import QtQuick.Layouts
+import QtQuick.Controls
 
-import com.nextcloud.desktopclient 1.0
-import Style 1.0
+import com.nextcloud.desktopclient
+import Style
 import "../tray"
 
 TextField {
@@ -47,6 +47,8 @@ TextField {
 
     placeholderText: enabled ? qsTr("Search for users or groups…") : qsTr("Sharing is not available for this folder")
     placeholderTextColor: placeholderColor
+    verticalAlignment: Qt.AlignVCenter
+    implicitHeight: Math.max(Style.talkReplyTextFieldPreferredHeight, contentHeight)
 
     onActiveFocusChanged: triggerSuggestionsVisibility()
     onTextChanged: triggerSuggestionsVisibility()
@@ -89,13 +91,6 @@ TextField {
 
     leftPadding: searchIcon.width + searchIcon.anchors.leftMargin + horizontalPaddingOffset
     rightPadding: clearTextButton.width + clearTextButton.anchors.rightMargin + horizontalPaddingOffset
-
-    background: Rectangle {
-        radius: 5
-        border.color: parent.activeFocus ? UserModel.currentUser.accentColor : palette.dark
-        border.width: 1
-        color: palette.base
-    }
 
     Image {
         id: searchIcon
@@ -185,8 +180,7 @@ TextField {
                 interactive: true
 
                 highlight: Rectangle {
-                    width: shareeListView.currentItem.width
-                    height: shareeListView.currentItem.height
+                    anchors.fill: shareeListView.currentItem
                     color: palette.highlight
                 }
                 highlightFollowsCurrentItem: true
@@ -200,8 +194,7 @@ TextField {
 
                 model: root.shareeModel
                 delegate: ShareeDelegate {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
+                    width: shareeListView.contentItem.width
 
                     enabled: model.type !== Sharee.LookupServerSearchResults
                     hoverEnabled: model.type !== Sharee.LookupServerSearchResults

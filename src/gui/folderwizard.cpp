@@ -38,6 +38,7 @@
 #include <QEvent>
 #include <QCheckBox>
 #include <QMessageBox>
+#include <QStandardPaths>
 
 #include <cstdlib>
 
@@ -465,10 +466,8 @@ void FolderWizardRemotePath::slotTypedPathFound(const QStringList &subpaths)
 LsColJob *FolderWizardRemotePath::runLsColJob(const QString &path)
 {
     auto *job = new LsColJob(_account, path);
-    auto props = QList<QByteArray>() << "resourcetype";
-    if (_account->capabilities().clientSideEncryptionAvailable()) {
-        props << "http://nextcloud.org/ns:is-encrypted";
-    }
+    const auto props = QList<QByteArray>() << "resourcetype"
+                                           << "http://nextcloud.org/ns:is-encrypted";
     job->setProperties(props);
     connect(job, &LsColJob::directoryListingSubfolders,
         this, &FolderWizardRemotePath::slotUpdateDirectories);
@@ -571,7 +570,7 @@ FolderWizardSelectiveSync::FolderWizardSelectiveSync(const AccountPtr &account)
     if (Theme::instance()->showVirtualFilesOption() && bestAvailableVfsMode() != Vfs::Off) {
         _virtualFilesCheckBox = new QCheckBox(tr("Use virtual files instead of downloading content immediately %1").arg(bestAvailableVfsMode() == Vfs::WindowsCfApi ? QString() : tr("(experimental)")));
         connect(_virtualFilesCheckBox, &QCheckBox::clicked, this, &FolderWizardSelectiveSync::virtualFilesCheckboxClicked);
-        connect(_virtualFilesCheckBox, &QCheckBox::stateChanged, this, [this](int state) {
+        connect(_virtualFilesCheckBox, &QCheckBox::checkStateChanged, this, [this](int state) {
             _selectiveSync->setEnabled(state == Qt::Unchecked);
         });
         _virtualFilesCheckBox->setChecked(bestAvailableVfsMode() == Vfs::WindowsCfApi);
@@ -621,9 +620,10 @@ void FolderWizardSelectiveSync::initializePage()
 
 bool FolderWizardSelectiveSync::validatePage()
 {
-    const bool useVirtualFiles = _virtualFilesCheckBox && _virtualFilesCheckBox->isChecked();
+    const auto mode = bestAvailableVfsMode();
+    const bool useVirtualFiles = (mode == Vfs::WindowsCfApi) && (_virtualFilesCheckBox && _virtualFilesCheckBox->isChecked());
     if (useVirtualFiles) {
-        const auto availability = Vfs::checkAvailability(wizard()->field(QStringLiteral("sourceFolder")).toString());
+        const auto availability = Vfs::checkAvailability(wizard()->field(QStringLiteral("sourceFolder")).toString(), mode);
         if (!availability) {
             auto msg = new QMessageBox(QMessageBox::Warning, tr("Virtual files are not available for the selected folder"), availability.error(), QMessageBox::Ok, this);
             msg->setAttribute(Qt::WA_DeleteOnClose);
@@ -671,6 +671,7 @@ FolderWizard::FolderWizard(AccountPtr account, QWidget *parent)
     , _folderWizardSourcePage(new FolderWizardLocalPath(account))
     , _folderWizardSelectiveSyncPage(new FolderWizardSelectiveSync(account))
 {
+    setWizardStyle(QWizard::ModernStyle);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
     setPage(Page_Source, _folderWizardSourcePage);
     _folderWizardSourcePage->installEventFilter(this);
